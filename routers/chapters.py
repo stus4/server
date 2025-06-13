@@ -1,16 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, FastAPI
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
+from .profile import read_current_user as get_current_user # якщо в profile.py є get_current_user
+
 
 from models import Chapter, Work, User
 from database import get_db
-from schemas import ChapterCreate, ChapterUpdate, ChapterOut
-from dependencies import get_current_user
+from schemas import ChapterCreate, ChapterUpdate, ChapterOut, ChapterSchema
 
 router = APIRouter(prefix="/chapters", tags=["Chapters"])
 
-
+app = FastAPI()
 @router.get("/work/{work_id}", response_model=List[ChapterOut])
 def get_chapters_for_work(work_id: UUID, db: Session = Depends(get_db)):
     """Отримання списку розділів твору"""
@@ -33,6 +34,7 @@ def create_chapter(
     current_user: User = Depends(get_current_user)
 ):
     """Додавання нового розділу (автором), з можливістю створення чернетки"""
+
     work = db.query(Work).get(chapter_data.work_id)
     if not work or work.author_id != current_user.id:
         raise HTTPException(status_code=403, detail="Ви не маєте прав на додавання розділу")
@@ -86,3 +88,21 @@ def delete_chapter(
     db.delete(chapter)
     db.commit()
     return
+@router.post("/draft", response_model=ChapterOut, status_code=status.HTTP_201_CREATED)
+def save_draft(
+    chapter_data: ChapterCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    work = db.query(Work).get(chapter_data.work_id)
+    if not work or work.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Ви не маєте прав на додавання розділу")
+
+    new_chapter = Chapter(
+        **chapter_data.dict(),
+        is_draft=True
+    )
+    db.add(new_chapter)
+    db.commit()
+    db.refresh(new_chapter)
+    return new_chapter

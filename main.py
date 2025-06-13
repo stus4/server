@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-
-from routers import auth, recommendations, work_metadata, popular
+from routers import auth, recommendations, work_metadata, popular, works, chapters
 from database import engine, Base
 
 logging.basicConfig(
@@ -26,7 +25,8 @@ app.include_router(work_metadata.router)
 app.include_router(auth.router)
 app.include_router(recommendations.router)
 app.include_router(popular.router)
+app.include_router(chapters.router)
 app.include_router(work_metadata.router, prefix="/api/work-metadata", tags=["Work Metadata"])
-
+app.include_router(works.router)
 # Створення таблиць у базі даних
 Base.metadata.create_all(bind=engine)

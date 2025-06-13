@@ -64,5 +64,68 @@ class WorkOut(BaseModel):
 
     class Config:
         orm_mode = True
+class ChapterCreate(BaseModel):
+    title: str
+    content: str
+    order: int
+    work_id: UUID
 
+class ChapterSchema(BaseModel):
+    id: Optional[UUID]  # якщо є id, можна і без нього
+    title: str
+    content: str
+    work_id: UUID
 
+    class Config:
+        orm_mode = True
+
+class ChapterUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    order: Optional[int] = None
+
+class ChapterOut(BaseModel):
+    id: UUID
+    title: str
+    content: str
+    order: int
+    work_id: UUID
+
+    class Config:
+        orm_mode = True
+class WorkCreateSchema(BaseModel):
+
+    title: str
+    author_id: UUID
+    description: Optional[str] = None
+    cover_path: Optional[str] = None
+    file_path: Optional[str] = None
+    category_id: Optional[int] = None
+    age_limit: Optional[int] = None
+    status_id: Optional[int] = None
+    tag_ids: Optional[List[int]] = []
+
+class WorkUpdateSchema(BaseModel):
+    title: Optional[str]
+    description: Optional[str]
+    cover_path: Optional[str]
+    file_path: Optional[str]
+    category_id: Optional[int]
+    age_limit: Optional[int]
+    status_id: Optional[int]
+
+class WorkResponseSchema(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str]
+    cover_path: Optional[str]
+    file_path: Optional[str]
+    category_id: Optional[int]
+    status_id: Optional[int]
+    age_limit: Optional[int]
+    author: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True

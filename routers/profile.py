@@ -2,6 +2,32 @@ from sqlalchemy.orm import Session
 from models import User, Work, UserInteraction, Comment
 import uuid
 from typing import Optional, List
+from fastapi import APIRouter, Depends, HTTPException
+from database import get_db
+router = APIRouter()
+
+@router.get("/me")
+def read_current_user(user_id: str, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user_id format")
+
+    user = get_user_profile(db, user_uuid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "id": str(user.id),
+        "name": user.name,
+        "last_name": user.last_name,
+        "username": user.username,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "avatar_path": user.avatar_path,
+        "birth": user.birth,
+        "bio": user.bio
+    }
 
 def get_user_profile(db: Session, user_id: uuid.UUID) -> Optional[User]:
     """
