@@ -72,7 +72,7 @@ class Subscription(Base):
 class Chapter(Base):
     __tablename__ = 'chapters'
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     work_id = Column(PGUUID(as_uuid=True), ForeignKey('works.id'), nullable=False)
     num = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)

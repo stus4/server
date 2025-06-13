@@ -67,7 +67,7 @@ class WorkOut(BaseModel):
 class ChapterCreate(BaseModel):
     title: str
     content: str
-    order: int
+    num: int
     work_id: UUID
 
 class ChapterSchema(BaseModel):
@@ -82,17 +82,17 @@ class ChapterSchema(BaseModel):
 class ChapterUpdate(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
-    order: Optional[int] = None
+    num: Optional[int] = None
 
 class ChapterOut(BaseModel):
     id: UUID
     title: str
     content: str
-    order: int
+    num: int
     work_id: UUID
 
-    class Config:
-        orm_mode = True
+
+
 class WorkCreateSchema(BaseModel):
 
     title: str

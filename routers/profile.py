@@ -28,6 +28,18 @@ def read_current_user(user_id: str, db: Session = Depends(get_db)):
         "birth": user.birth,
         "bio": user.bio
     }
+@router.get("/me/id")
+def get_current_user_id(user_id: str, db: Session = Depends(get_db)):
+    try:
+        user_uuid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user_id format")
+
+    user = get_user_profile(db, user_uuid)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user.id
 
 def get_user_profile(db: Session, user_id: uuid.UUID) -> Optional[User]:
     """
