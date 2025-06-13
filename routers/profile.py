@@ -2,12 +2,14 @@ from sqlalchemy.orm import Session
 from models import User, Work, UserInteraction, Comment
 import uuid
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from database import get_db
+from schemas import UserProfileOut
 router = APIRouter()
 
-@router.get("/me")
-def read_current_user(user_id: str, db: Session = Depends(get_db)):
+
+@router.get("/me", response_model=UserProfileOut, description="Отримати профіль користувача за user_id")
+def read_current_user(user_id: str = Query(..., description="UUID користувача"), db: Session = Depends(get_db)):
     try:
         user_uuid = uuid.UUID(user_id)
     except ValueError:
@@ -112,6 +114,16 @@ def get_liked_works(db: Session, user_id: uuid.UUID) -> List[Work]:
         .all()
     )
 
+def get_viewed_works(db: Session, user_id: uuid.UUID) -> List[Work]:
+    """
+    Отримати список творів, які користувач переглянув (is_viewed=True).
+    """
+    return (
+        db.query(Work)
+        .join(UserInteraction, UserInteraction.work_id == Work.id)
+        .filter(UserInteraction.user_id == user_id, UserInteraction.is_viewed == True)
+        .all()
+    )
 
 from models import Chapter
 
@@ -127,16 +139,24 @@ def get_commented_works(db: Session, user_id: uuid.UUID) -> List[Work]:
         .distinct()
         .all()
     )
-def get_viewed_works(db: Session, user_id: uuid.UUID) -> List[Work]:
-    """
-    Отримати список творів, які користувач переглянув (is_viewed=True).
-    """
-    return (
-        db.query(Work)
-        .join(UserInteraction, UserInteraction.work_id == Work.id)
-        .filter(UserInteraction.user_id == user_id, UserInteraction.is_viewed == True)
-        .all()
-    )
 
 
+def has_interacted(db: Session, user_id: uuid.UUID, work_id: uuid.UUID, interaction_type: str) -> bool:
+    interaction = db.query(UserInteraction).filter_by(
+        user_id=user_id,
+        work_id=work_id
+    ).first()
 
+    if not interaction:
+        return False
+
+    if interaction_type == "like":
+        return interaction.is_liked
+    elif interaction_type == "save":
+        return interaction.is_saved
+    elif interaction_type == "view":
+        return interaction.is_viewed
+    elif interaction_type == "read":
+        return interaction.is_read
+    else:
+        return False

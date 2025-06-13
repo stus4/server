@@ -52,7 +52,7 @@ class UserOut(BaseModel):
 class WorkOut(BaseModel):
     id: UUID
     title: str
-    author: str
+    author: UUID
     description: Optional[str]
     cover_path: Optional[str]
     file_path: Optional[str]
@@ -126,6 +126,19 @@ class WorkResponseSchema(BaseModel):
     author: UUID
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        orm_mode = True
+class UserProfileOut(BaseModel):
+    id: str
+    name: Optional[str]
+    last_name: Optional[str]
+    username: Optional[str]
+    email: Optional[EmailStr]
+    phone_number: Optional[str]
+    avatar_path: Optional[str]
+    birth: Optional[int]
+    bio: Optional[str]
 
     class Config:
         orm_mode = True

@@ -7,9 +7,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import APIRouter, Depends, HTTPException
 from database import get_db
-from models import Rating, Work
+from models import Rating, Work, UserInteraction
 from sqlalchemy.orm import joinedload
-
+import logging
+from routers.work_metadata import count_likes, count_views, count_reads, count_saves
+from uuid import UUID
+from .profile import has_interacted
 router = APIRouter()
 
 # 1. Матриця користувач-товар
@@ -35,18 +38,23 @@ def calculate_user_similarity(user_item_matrix: pd.DataFrame):
 
 # 4. Рекомендації на основі опису (контент)
 def get_content_based(user_id: str, works: List[Work], content_sim):
-    # Отримаємо всі твори, які оцінив цей користувач
     user_rated_works = [w for w in works if str(user_id) in [str(r.user_id) for r in w.ratings]]
     if not user_rated_works:
-        return []
+        return works  # якщо користувач нічого не оцінював, повернути всі твори без сортування
 
     rated_indices = [works.index(w) for w in user_rated_works if w in works]
 
-    # Середнє подібності до інших творів
+    # Обчислюємо середню схожість кожного твору до творів, які користувач оцінив
     similarity_scores = np.mean([content_sim[i] for i in rated_indices], axis=0)
-    top_indices = np.argsort(similarity_scores)[::-1][:6]
 
-    return [works[i] for i in top_indices if works[i] not in user_rated_works]
+    # Сортуємо індекси творів за спаданням схожості
+    sorted_indices = np.argsort(similarity_scores)[::-1]
+
+    # Повертаємо всі твори у порядку релевантності
+    sorted_works = [works[i] for i in sorted_indices]
+
+    return sorted_works
+
 
 # 5. Рекомендації на основі інших користувачів (колаборативна)
 def get_collaborative_based(user_id: str, matrix: pd.DataFrame, similarity):
@@ -72,36 +80,31 @@ def hybrid_recommendation(user_id: str, db: Session):
     content_sim = calculate_content_similarity(works)
     collab_sim = calculate_user_similarity(matrix) if not matrix.empty else None
 
-    # Контентні рекомендації
     content_recs = get_content_based(user_id, works, content_sim)
-
-    # Колаборативні рекомендації
     collab_recs_ids = get_collaborative_based(user_id, matrix, collab_sim) if collab_sim is not None else []
-
     collab_recs = [w for w in works if str(w.id) in collab_recs_ids]
 
-    # Якщо немає колаборативних рекомендацій, застосовуємо популярність
     if not collab_recs:
         print(f"Користувач {user_id} не має колаборативних рекомендацій, вибір за популярністю.")
-        # Сортуємо твори по кількості оцінок та середньому рейтингу
-        popular_works = db.query(Work, func.count(Rating.id).label('rating_count'), func.avg(Rating.rating).label('avg_rating')) \
-            .join(Rating, Rating.work_id == Work.id) \
-            .group_by(Work.id) \
-            .order_by(func.count(Rating.id).desc(), func.avg(Rating.rating).desc()) \
-            .limit(5) \
-            .all()
+        # Повертаємо всі твори
+        results = works
+    else:
+        combined = list({w.id: w for w in content_recs + collab_recs}.values())
+        results = combined  # без обрізки [:5]
 
-        return [work[0] for work in popular_works]
+    # Фільтруємо твори автора, що робить запит
+    filtered_results = [w for w in results if w.author_user and str(w.author_user.id) != user_id]
 
-    # Об'єднання та унікальність
-    combined = list({w.id: w for w in content_recs + collab_recs}.values())[:5]
-    return combined
+
+    # Можна обмежити кількість рекомендованих творів, наприклад, до 10
+    return filtered_results[:10]
 @router.get("/recommendations/{user_id}")
 async def get_recommendations(user_id: str, db: Session = Depends(get_db)):
     try:
         recommendations = hybrid_recommendation(user_id, db)
 
         recommendations_data = []
+
         for work in recommendations:
             work_with_details = db.query(Work).options(
                 joinedload(Work.category),
@@ -112,6 +115,18 @@ async def get_recommendations(user_id: str, db: Session = Depends(get_db)):
             if not work_with_details:
                 continue
 
+            # ✅ Ось тут вже можемо використовувати work_with_details.id
+            likes = count_likes(db, work_with_details.id)
+            saves = count_saves(db, work_with_details.id)
+            views = count_views(db, work_with_details.id)
+            read = count_reads(db, work_with_details.id)
+
+            # ✅ Виклики перевірки взаємодії
+            is_liked = has_interacted(db, UUID(user_id), work_with_details.id, "like")
+            is_saved = has_interacted(db, UUID(user_id), work_with_details.id, "save")
+            is_viewed = has_interacted(db, UUID(user_id), work_with_details.id, "view")
+            is_read = has_interacted(db, UUID(user_id), work_with_details.id, "read")
+
             work_data = {
                 "id": str(work_with_details.id),
                 "title": work_with_details.title,
@@ -119,10 +134,20 @@ async def get_recommendations(user_id: str, db: Session = Depends(get_db)):
                 "author": work_with_details.author_user.name if work_with_details.author_user else "Невідомий автор",
                 "genres": [work_with_details.category.name] if work_with_details.category else [],
                 "tags": [tag.name for tag in work_with_details.tags],
+                "likes": likes,
+                "views": views,
+                "saved": saves,
+                "read": read,
+                "isLiked": is_liked,
+                "isSaved": is_saved,
+                "isViewed": is_viewed,
+                "isRead": is_read,
             }
             recommendations_data.append(work_data)
 
         return recommendations_data
 
     except Exception as e:
+        logging.error(f"Помилка отримання рекомендацій для {user_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Не вдалося отримати рекомендації: {str(e)}")
+
