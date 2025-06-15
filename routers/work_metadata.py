@@ -8,7 +8,7 @@ from schemas import WorkOut
 from uuid import UUID
 from .search import search_works
 from sqlalchemy import func
-
+from fastapi.responses import JSONResponse
 def get_interaction_stats(db: Session, work_id: UUID) -> dict:
     return {
         "likes": count_likes(db, work_id),
@@ -45,7 +45,8 @@ router = APIRouter()
 @router.get("/categories")
 def get_categories(db: Session = Depends(get_db)):
     categories = db.query(Category).all()
-    return [{"id": c.id, "name": c.name, "description": c.description} for c in categories]
+    result = [{"id": c.id, "name": c.name, "description": c.description} for c in categories]
+    return JSONResponse(content=result, media_type="application/json; charset=utf-8")
 
 @router.get("/tags")
 def get_tags(db: Session = Depends(get_db)):
