@@ -83,7 +83,7 @@ class Chapter(Base):
 class UserInteraction(Base):
     __tablename__ = 'user_interactions'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     work_id = Column(PGUUID(as_uuid=True), ForeignKey('works.id'), nullable=False)
     user_id = Column(PGUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     is_saved = Column(Boolean, default=False, nullable=False)

@@ -9,27 +9,34 @@ from uuid import UUID
 from .search import search_works
 from sqlalchemy import func
 
+def get_interaction_stats(db: Session, work_id: UUID) -> dict:
+    return {
+        "likes": count_likes(db, work_id),
+        "views": count_views(db, work_id),
+        "reads": count_reads(db, work_id),
+        "saved": count_saves(db, work_id),
+    }
 
 def count_likes(db: Session, work_id: UUID) -> int:
-    return db.query(func.count()).filter(
+    return db.query(func.count(UserInteraction.id)).filter(
         UserInteraction.work_id == work_id,
         UserInteraction.is_liked == True
     ).scalar() or 0
 
 def count_views(db: Session, work_id: UUID) -> int:
-    return db.query(func.count()).filter(
+    return db.query(func.count(UserInteraction.id)).filter(
         UserInteraction.work_id == work_id,
         UserInteraction.is_viewed == True
     ).scalar() or 0
 
 def count_reads(db: Session, work_id: UUID) -> int:
-    return db.query(func.count()).filter(
+    return db.query(func.count(UserInteraction.id)).filter(
         UserInteraction.work_id == work_id,
         UserInteraction.is_read == True
     ).scalar() or 0
 
 def count_saves(db: Session, work_id: UUID) -> int:
-    return db.query(func.count()).filter(
+    return db.query(func.count(UserInteraction.id)).filter(
         UserInteraction.work_id == work_id,
         UserInteraction.is_saved == True
     ).scalar() or 0

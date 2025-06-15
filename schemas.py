@@ -39,7 +39,12 @@ class CommentOut(BaseModel):
     class Config:
         orm_mode = True
 
-
+class AuthorOut(BaseModel):
+    id: UUID
+    name: str
+    username: str
+    class Config:
+        orm_mode = True
 class ReportCommentRequest(BaseModel):
     reason: str
 class UserOut(BaseModel):
@@ -52,7 +57,7 @@ class UserOut(BaseModel):
 class WorkOut(BaseModel):
     id: UUID
     title: str
-    author: UUID
+    author_user: AuthorOut
     description: Optional[str]
     cover_path: Optional[str]
     file_path: Optional[str]
@@ -64,6 +69,7 @@ class WorkOut(BaseModel):
 
     class Config:
         orm_mode = True
+        from_attributes = True
 class ChapterCreate(BaseModel):
     title: str
     content: str
@@ -142,3 +148,9 @@ class UserProfileOut(BaseModel):
 
     class Config:
         orm_mode = True
+class InteractionStats(BaseModel):
+    likes: int
+    views: int
+    reads: int
+    saved: int
+

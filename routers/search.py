@@ -2,6 +2,9 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc, and_, or_
 from models import Work, User, Tag, WorkTag, Rating
 from typing import List, Optional
+from fastapi import APIRouter, Depends
+from schemas import WorkOut
+from database import get_db
 
 def search_works(db: Session,
                  title: Optional[str] = None,
@@ -53,3 +56,25 @@ def search_works(db: Session,
         query = query.outerjoin(Rating).group_by(Work.id).order_by(desc(avg_rating))
 
     return query.all()
+
+router = APIRouter(prefix="/search", tags=["Search"])
+@router.get("/search", response_model=List[WorkOut])
+def search_works_route(
+    title: Optional[str] = None,
+    author_name: Optional[str] = None,
+    tag_names: Optional[List[str]] = None,
+    genre_id: Optional[int] = None,
+    status_id: Optional[int] = None,
+    order_by_popularity: bool = False,
+    db: Session = Depends(get_db),
+):
+    return search_works(
+        db=db,
+        title=title,
+        author_name=author_name,
+        tag_names=tag_names,
+        genre_id=genre_id,
+        status_id=status_id,
+        order_by_popularity=order_by_popularity
+    )
+
