@@ -117,8 +117,12 @@ class WorkUpdateSchema(BaseModel):
     cover_path: Optional[str]
     file_path: Optional[str]
     category_id: Optional[int]
+    tags: Optional[List[UUID]]
     age_limit: Optional[int]
     status_id: Optional[int]
+
+    class Config:
+        orm_mode=True
 
 class WorkResponseSchema(BaseModel):
     id: UUID

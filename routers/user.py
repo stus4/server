@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
 from database import get_db  # твоє підключення до БД
-from models import User  # модель User
+from models import User, UserInteraction, Work  # модель User
 from fastapi.responses import JSONResponse
+from typing import List, Optional
+from schemas import WorkOut
+from sqlalchemy.orm import joinedload
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -48,3 +51,25 @@ def get_user_profile(user_id: UUID, db: Session = Depends(get_db)):
         media_type="application/json; charset=utf-8"
     )
 
+
+@router.get("/users/saved_works/{user_id}")
+def get_saved_works(user_id: UUID, db: Session = Depends(get_db)):
+    saved_interactions = db.query(UserInteraction).options(
+        joinedload(UserInteraction.work).joinedload(Work.author_user)
+    ).filter(
+        UserInteraction.user_id == user_id,
+        UserInteraction.is_saved == True
+    ).all()
+
+    return [interaction.work for interaction in saved_interactions]
+
+@router.get("/users/liked_works/{user_id}")
+def get_saved_works(user_id: UUID, db: Session = Depends(get_db)):
+    liked_interactions = db.query(UserInteraction).options(
+        joinedload(UserInteraction.work).joinedload(Work.author_user)
+    ).filter(
+        UserInteraction.user_id == user_id,
+        UserInteraction.is_liked == True
+    ).all()
+
+    return [interaction.work for interaction in liked_interactions]

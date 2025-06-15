@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
-from models import Work, WorkTag  # інші імпорти як потрібно
+from models import Work, WorkTag, Tag  # інші імпорти як потрібно
 from database import get_sync_db  # синхронна сесія
 from uuid import UUID
 from datetime import datetime
@@ -75,13 +75,27 @@ def update_work(work_id: UUID, update_data: WorkUpdateSchema, db: Session = Depe
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
 
-    for key, value in update_data.dict(exclude_unset=True).items():
-        setattr(work, key, value)
+    data = update_data.dict(exclude_unset=True)
+
+    # Оновлення звичайних полів
+    for key, value in data.items():
+        if key != "tags":
+            setattr(work, key, value)
+
+
+    if "tags" in data:
+        work.tags.clear()  # видаляємо всі поточні зв’язки
+        for tag_id in data["tags"]:
+            tag = db.query(Tag).filter(Tag.id == tag_id).first()
+            if tag:
+                work.tags.append(tag)
+
     work.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(work)
     return work
+
 
 
 @router.delete("/{work_id}")
