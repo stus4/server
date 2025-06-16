@@ -15,7 +15,8 @@ app = FastAPI()
 @router.get("/work/{work_id}", response_model=List[ChapterOut])
 def get_chapters_for_work(work_id: UUID, db: Session = Depends(get_db)):
     """Отримання списку розділів твору"""
-    return db.query(Chapter).filter(Chapter.work_id == work_id).order_by(Chapter.order).all()
+    return db.query(Chapter).filter(Chapter.work_id == work_id).order_by(Chapter.num).all()
+
 
 @app.get("/chapters/{chapter_id}", response_model=ChapterOut)
 async def get_chapter(chapter_id: UUID, db: Session = Depends(get_db)):

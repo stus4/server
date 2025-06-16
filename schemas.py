@@ -93,9 +93,12 @@ class ChapterUpdate(BaseModel):
 class ChapterOut(BaseModel):
     id: UUID
     title: str
-    content: str
+    content: Optional[str] = None  # Зробити необов'язковим
     num: int
     work_id: UUID
+
+    class Config:
+        orm_mode = True
 
 
 
