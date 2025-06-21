@@ -9,3 +9,4 @@ email-validator
 mysql-connector-python
 pymysql
 passlib[bcrypt]
+pandas
