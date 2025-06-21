@@ -1,3 +1,7 @@
+fastapi
+uvicorn[standard]
+aiomysql
+
 absl-py==2.1.0
 anyio==4.9.0
 argcomplete==3.5.3
