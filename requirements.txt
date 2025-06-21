@@ -10,3 +10,4 @@ mysql-connector-python
 pymysql
 passlib[bcrypt]
 pandas
+scikit-learn
