@@ -12,7 +12,7 @@ from fastapi.encoders import jsonable_encoder
 router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("/{user_id}")
-def get_user_profile(user_id: UUID, db: Session = Depends(get_db)):
+def get_user_profile(user_id: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
