@@ -1,180 +1,177 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional, List
-from datetime import date, datetime
-from uuid import UUID
-from typing import ClassVar
+    from pydantic import BaseModel, EmailStr
+    from typing import Optional, List
+    from datetime import date, datetime
+    from uuid import UUID
+    from typing import ClassVar
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
+    class LoginRequest(BaseModel):
+        email: str
+        password: str
 
-class RegisterRequest(BaseModel):
-    username: str
-    name: str
-    last_name: str
-    email: EmailStr
-    password: str
-    birth: Optional[str] = None
-    phone_number: Optional[str] = None
-    avatar_path: Optional[str] = None
-    bio: Optional[str] = None
+    class RegisterRequest(BaseModel):
+        username: str
+        name: str
+        last_name: str
+        email: EmailStr
+        password: str
+        birth: Optional[str] = None
+        phone_number: Optional[str] = None
+        avatar_path: Optional[str] = None
+        bio: Optional[str] = None
 
-class RecommendationOut(BaseModel):
-    id: str
-    title: str
-    author: str
-    genres: List[str]
-    tags: List[str]
-class CommentCreate(BaseModel):
-    content: str
-    work_id: Optional[str] = None
-    chapter_id: Optional[str] = None
-
-
-class CommentOut(BaseModel):
-    id: str
-    user_id: str
-    text: str
-    created_at: datetime
-
-    model_config: ClassVar[dict] = {
-    "from_attributes": True
-}
+    class RecommendationOut(BaseModel):
+        id: str
+        title: str
+        author: str
+        genres: List[str]
+        tags: List[str]
+    class CommentCreate(BaseModel):
+        content: str
+        work_id: Optional[str] = None
+        chapter_id: Optional[str] = None
 
 
-class AuthorOut(BaseModel):
-    id: UUID
-    name: str
-    username: str
-    model_config: ClassVar[dict] = {
-        "from_attributes": True
-    }
-class ReportCommentRequest(BaseModel):
-    reason: str
-class UserOut(BaseModel):
-    username: str
+    class CommentOut(BaseModel):
+        id: str
+        user_id: str
+        text: str
+        created_at: datetime
 
-
-    model_config: ClassVar[dict] = {
-        "from_attributes": True
-    }
-
-class WorkOut(BaseModel):
-    id: UUID
-    title: str
-    author_user: AuthorOut
-    description: Optional[str]
-    cover_path: Optional[str]
-    file_path: Optional[str]
-    created_at: datetime
-    updated_at: datetime
-    category_id: Optional[int]
-    age_limit: Optional[int]
-    status_id: Optional[int]
-
-    model_config: ClassVar[dict] = {
-        "from_attributes": True
-    }
-class ChapterCreate(BaseModel):
-    title: str
-    content: str
-    num: int
-    work_id: UUID
-
-class ChapterSchema(BaseModel):
-    id: Optional[UUID]  # якщо є id, можна і без нього
-    title: str
-    content: str
-    work_id: UUID
-
-    model_config: ClassVar[dict] = {
+        model_config: ClassVar[dict] = {
         "from_attributes": True
     }
 
 
-class ChapterUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
-    num: Optional[int] = None
+    class AuthorOut(BaseModel):
+        id: str
+        name: str
+        username: str
+        model_config: ClassVar[dict] = {
+            "from_attributes": True
+        }
+    class ReportCommentRequest(BaseModel):
+        reason: str
+    class UserOut(BaseModel):
+        username: str
 
-class ChapterOut(BaseModel):
-    id: UUID
-    title: str
-    content: Optional[str] = None  # Зробити необов'язковим
-    num: int
-    work_id: UUID
 
-    model_config: ClassVar[dict] = {
+        model_config: ClassVar[dict] = {
+            "from_attributes": True
+        }
+
+    class WorkOut(BaseModel):
+        id: str
+        title: str
+        author_user: AuthorOut
+        description: Optional[str]
+        cover_path: Optional[str]
+        file_path: Optional[str]
+        created_at: datetime
+        updated_at: datetime
+        category_id: Optional[int]
+        age_limit: Optional[int]
+        status_id: Optional[int]
+
+        model_config: ClassVar[dict] = {
+            "from_attributes": True
+        }
+    class ChapterCreate(BaseModel):
+        title: str
+        content: str
+        num: int
+        work_id: str
+
+    class ChapterSchema(BaseModel):
+        id: Optional[str]  # якщо є id, можна і без нього
+        title: str
+        content: str
+        work_id: str
+
+        model_config: ClassVar[dict] = {
+            "from_attributes": True
+        }
+
+
+    class ChapterUpdate(BaseModel):
+        title: Optional[str] = None
+        content: Optional[str] = None
+        num: Optional[int] = None
+
+    class ChapterOut(BaseModel):
+        id: str
+        title: str
+        content: Optional[str] = None  # Зробити необов'язковим
+        num: int
+        work_id: str
+
+        model_config: ClassVar[dict] = {
+            "from_attributes": True
+        }
+
+
+    class WorkCreateSchema(BaseModel):
+        title: str
+        author_id: str  # str замість str
+        description: Optional[str] = None
+        cover_path: Optional[str] = None
+        file_path: Optional[str] = None
+        category_id: Optional[int] = None
+        age_limit: Optional[int] = None
+        status_id: Optional[int] = None
+        tag_ids: Optional[List[int]] = []
+
+    class WorkUpdateSchema(BaseModel):
+        title: Optional[str]
+        description: Optional[str]
+        cover_path: Optional[str]
+        file_path: Optional[str]
+        category_id: Optional[int]
+        tags: Optional[List[UUID]]
+        age_limit: Optional[int]
+        status_id: Optional[int]
+
+        model_config: ClassVar[dict] = {
         "from_attributes": True
     }
 
 
+    class WorkResponseSchema(BaseModel):
+        id: UUID
+        title: str
+        description: Optional[str]
+        cover_path: Optional[str]
+        file_path: Optional[str]
+        category_id: Optional[int]
+        status_id: Optional[int]
+        age_limit: Optional[int]
+        author: UUID
+        created_at: datetime
+        updated_at: datetime
+
+        model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 
 
-class WorkCreateSchema(BaseModel):
+    class UserProfileOut(BaseModel):
+        id: str
+        name: Optional[str]
+        last_name: Optional[str]
+        username: Optional[str]
+        email: Optional[EmailStr]
+        phone_number: Optional[str]
+        avatar_path: Optional[str]
+        birth: Optional[int]
+        bio: Optional[str]
 
-    title: str
-    author_id: UUID
-    description: Optional[str] = None
-    cover_path: Optional[str] = None
-    file_path: Optional[str] = None
-    category_id: Optional[int] = None
-    age_limit: Optional[int] = None
-    status_id: Optional[int] = None
-    tag_ids: Optional[List[int]] = []
-
-class WorkUpdateSchema(BaseModel):
-    title: Optional[str]
-    description: Optional[str]
-    cover_path: Optional[str]
-    file_path: Optional[str]
-    category_id: Optional[int]
-    tags: Optional[List[UUID]]
-    age_limit: Optional[int]
-    status_id: Optional[int]
-
-    model_config: ClassVar[dict] = {
-    "from_attributes": True
-}
+        model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 
 
-class WorkResponseSchema(BaseModel):
-    id: UUID
-    title: str
-    description: Optional[str]
-    cover_path: Optional[str]
-    file_path: Optional[str]
-    category_id: Optional[int]
-    status_id: Optional[int]
-    age_limit: Optional[int]
-    author: UUID
-    created_at: datetime
-    updated_at: datetime
-
-    model_config: ClassVar[dict] = {
-    "from_attributes": True
-}
-
-
-class UserProfileOut(BaseModel):
-    id: str
-    name: Optional[str]
-    last_name: Optional[str]
-    username: Optional[str]
-    email: Optional[EmailStr]
-    phone_number: Optional[str]
-    avatar_path: Optional[str]
-    birth: Optional[int]
-    bio: Optional[str]
-
-    model_config: ClassVar[dict] = {
-    "from_attributes": True
-}
-
-
-class InteractionStats(BaseModel):
-    likes: int
-    views: int
-    reads: int
-    saved: int
+    class InteractionStats(BaseModel):
+        likes: int
+        views: int
+        reads: int
+        saved: int
 

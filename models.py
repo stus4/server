@@ -15,7 +15,8 @@ class WorkStatus(Base):
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True)
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
     username = Column(String(50), unique=True, nullable=False)
@@ -40,9 +41,10 @@ class Category(Base):
 class Work(Base):
 	__tablename__ = 'works'
 
-	id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    author = Column(String(36), ForeignKey('users.id'), nullable=False)
+
 	title = Column(String(100), nullable=False)
-	author = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
 	description = Column(Text)
 	cover_path = Column(String(150))
 	file_path = Column(String(150))
