@@ -6,3 +6,5 @@ aiomysql
 pydantic[email]
 python-dotenv
 email-validator
+mysql-connector-python
+pymysql
