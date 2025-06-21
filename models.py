@@ -1,6 +1,5 @@
-from sqlalchemy import Column, String, Integer, Text, UUID, Boolean, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, String, Integer, Text, Boolean, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.declarative import declarative_base
 import uuid
 
@@ -8,13 +7,11 @@ Base = declarative_base()
 
 class WorkStatus(Base):
     __tablename__ = 'work_statuses'
-
     id = Column(Integer, primary_key=True)
     name = Column(String(20), nullable=False)
 
 class User(Base):
     __tablename__ = 'users'
-
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(50), nullable=False)
     last_name = Column(String(50), nullable=False)
@@ -33,14 +30,12 @@ class User(Base):
 
 class Category(Base):
     __tablename__ = 'categories'
-
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     description = Column(Text)
 
 class Work(Base):
     __tablename__ = 'works'
-
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     author = Column(String(36), ForeignKey('users.id'), nullable=False)
 
@@ -62,10 +57,9 @@ class Work(Base):
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'
-
-    id = Column(PGUUID(as_uuid=True), primary_key=True)
-    work_id = Column(PGUUID(as_uuid=True), ForeignKey('works.id'), nullable=False)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    work_id = Column(String(36), ForeignKey('works.id'), nullable=False)
+    user_id = Column(String(36), ForeignKey('users.id'), nullable=False)
     created_at = Column(TIMESTAMP, nullable=False)
 
     work = relationship('Work')
@@ -73,9 +67,8 @@ class Subscription(Base):
 
 class Chapter(Base):
     __tablename__ = 'chapters'
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    work_id = Column(PGUUID(as_uuid=True), ForeignKey('works.id'), nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    work_id = Column(String(36), ForeignKey('works.id'), nullable=False)
     num = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     file_path = Column(String(255))
@@ -84,10 +77,9 @@ class Chapter(Base):
 
 class UserInteraction(Base):
     __tablename__ = 'user_interactions'
-
     id = Column(Integer, primary_key=True, autoincrement=True)
-    work_id = Column(PGUUID(as_uuid=True), ForeignKey('works.id'), nullable=False)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    work_id = Column(String(36), ForeignKey('works.id'), nullable=False)
+    user_id = Column(String(36), ForeignKey('users.id'), nullable=False)
     is_saved = Column(Boolean, default=False, nullable=False)
     is_liked = Column(Boolean, default=False, nullable=False)
     is_viewed = Column(Boolean, default=False, nullable=False)
@@ -98,10 +90,9 @@ class UserInteraction(Base):
 
 class Comment(Base):
     __tablename__ = 'comments'
-
     id = Column(Integer, primary_key=True)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
-    chapter_id = Column(PGUUID(as_uuid=True), ForeignKey('chapters.id'), nullable=False)
+    user_id = Column(String(36), ForeignKey('users.id'), nullable=False)
+    chapter_id = Column(String(36), ForeignKey('chapters.id'), nullable=False)
     text = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, nullable=False)
 
@@ -110,25 +101,22 @@ class Comment(Base):
 
 class Rating(Base):
     __tablename__ = 'ratings'
-
     id = Column(Integer, primary_key=True)
-    work_id = Column(UUID(as_uuid=True), ForeignKey("works.id"))
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    work_id = Column(String(36), ForeignKey("works.id"))
+    user_id = Column(String(36), ForeignKey("users.id"))
     rating = Column(Integer, nullable=False)
 
     work = relationship("Work", back_populates="ratings")
 
 class Tag(Base):
     __tablename__ = 'tags'
-
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
     description = Column(String)
 
 class WorkTag(Base):
     __tablename__ = 'work_tags'
-
-    work_id = Column(PGUUID(as_uuid=True), ForeignKey('works.id'), primary_key=True)
+    work_id = Column(String(36), ForeignKey('works.id'), primary_key=True)
     tag_id = Column(Integer, ForeignKey('tags.id'), primary_key=True)
 
     work = relationship('Work', overlaps="tags,works")
@@ -136,9 +124,8 @@ class WorkTag(Base):
 
 class Session(Base):
     __tablename__ = 'sessions'
-
-    id = Column(PGUUID(as_uuid=True), primary_key=True)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey('users.id'), nullable=False)
     created_at = Column(TIMESTAMP, nullable=False)
     expires_at = Column(TIMESTAMP, nullable=False)
     ip_address = Column(String(45))
