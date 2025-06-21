@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import date, datetime
 from uuid import UUID
+from typing import ClassVar
 
 class LoginRequest(BaseModel):
     email: str
@@ -36,29 +37,27 @@ class CommentOut(BaseModel):
     text: str
     created_at: datetime
 
-    model_config = {
-    "from_attributes": True
-}
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 
 
 class AuthorOut(BaseModel):
     id: UUID
     name: str
     username: str
-    model_config = {
-    "from_attributes": True
-}
-
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 class ReportCommentRequest(BaseModel):
     reason: str
 class UserOut(BaseModel):
     username: str
 
 
-    model_config = {
-    "from_attributes": True
-}
-
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 
 class WorkOut(BaseModel):
     id: UUID
@@ -73,10 +72,9 @@ class WorkOut(BaseModel):
     age_limit: Optional[int]
     status_id: Optional[int]
 
-    cmodel_config = {
-    "from_attributes": True
-}
-
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 class ChapterCreate(BaseModel):
     title: str
     content: str
@@ -89,9 +87,9 @@ class ChapterSchema(BaseModel):
     content: str
     work_id: UUID
 
-    model_config = {
-    "from_attributes": True
-}
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 
 
 class ChapterUpdate(BaseModel):
@@ -106,9 +104,9 @@ class ChapterOut(BaseModel):
     num: int
     work_id: UUID
 
-    model_config = {
-    "from_attributes": True
-}
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
 
 
 
