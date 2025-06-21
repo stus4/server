@@ -38,8 +38,8 @@ class CommentOut(BaseModel):
     created_at: datetime
 
     model_config: ClassVar[dict] = {
-        "from_attributes": True
-    }
+    "from_attributes": True
+}
 
 
 class AuthorOut(BaseModel):
@@ -133,7 +133,7 @@ class WorkUpdateSchema(BaseModel):
     age_limit: Optional[int]
     status_id: Optional[int]
 
-    model_config = {
+    model_config: ClassVar[dict] = {
     "from_attributes": True
 }
 
@@ -151,9 +151,10 @@ class WorkResponseSchema(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {
+    model_config: ClassVar[dict] = {
     "from_attributes": True
 }
+
 
 class UserProfileOut(BaseModel):
     id: str
@@ -166,9 +167,10 @@ class UserProfileOut(BaseModel):
     birth: Optional[int]
     bio: Optional[str]
 
-    model_config = {
+    model_config: ClassVar[dict] = {
     "from_attributes": True
 }
+
 
 class InteractionStats(BaseModel):
     likes: int
