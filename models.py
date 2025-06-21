@@ -1,6 +1,5 @@
 from sqlalchemy import Column, String, Integer, Text, UUID, Boolean, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.declarative import declarative_base
 import uuid
@@ -12,9 +11,9 @@ class WorkStatus(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(20), nullable=False)
+
 class User(Base):
     __tablename__ = 'users'
-
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(50), nullable=False)
@@ -38,27 +37,28 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     description = Column(Text)
-class Work(Base):
-	__tablename__ = 'works'
 
-	id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+class Work(Base):
+    __tablename__ = 'works'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     author = Column(String(36), ForeignKey('users.id'), nullable=False)
 
-	title = Column(String(100), nullable=False)
-	description = Column(Text)
-	cover_path = Column(String(150))
-	file_path = Column(String(150))
-	created_at = Column(TIMESTAMP, nullable=False)
-	updated_at = Column(TIMESTAMP, nullable=False)
-	category_id = Column(Integer, ForeignKey('categories.id'))
-	age_limit = Column(Integer)
-	status_id = Column(Integer, ForeignKey('work_statuses.id'))
+    title = Column(String(100), nullable=False)
+    description = Column(Text)
+    cover_path = Column(String(150))
+    file_path = Column(String(150))
+    created_at = Column(TIMESTAMP, nullable=False)
+    updated_at = Column(TIMESTAMP, nullable=False)
+    category_id = Column(Integer, ForeignKey('categories.id'))
+    age_limit = Column(Integer)
+    status_id = Column(Integer, ForeignKey('work_statuses.id'))
 
-	ratings = relationship("Rating", back_populates="work")
-	author_user = relationship("User", back_populates="works")
-	category = relationship("Category", backref="works")
-	status = relationship("WorkStatus", backref="works")
-	tags = relationship("Tag", secondary="work_tags", backref="works", overlaps="work,tag")
+    ratings = relationship("Rating", back_populates="work")
+    author_user = relationship("User", back_populates="works")
+    category = relationship("Category", backref="works")
+    status = relationship("WorkStatus", backref="works")
+    tags = relationship("Tag", secondary="work_tags", backref="works", overlaps="work,tag")
 
 class Subscription(Base):
     __tablename__ = 'subscriptions'
@@ -92,6 +92,7 @@ class UserInteraction(Base):
     is_liked = Column(Boolean, default=False, nullable=False)
     is_viewed = Column(Boolean, default=False, nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)
+
     work = relationship('Work')
     user = relationship("User", back_populates="interactions")
 
@@ -106,6 +107,7 @@ class Comment(Base):
 
     user = relationship("User", back_populates="comments")
     chapter = relationship('Chapter')
+
 class Rating(Base):
     __tablename__ = 'ratings'
 
@@ -114,15 +116,14 @@ class Rating(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     rating = Column(Integer, nullable=False)
 
-    # зворотній зв’язок
     work = relationship("Work", back_populates="ratings")
+
 class Tag(Base):
     __tablename__ = 'tags'
 
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
     description = Column(String)
-
 
 class WorkTag(Base):
     __tablename__ = 'work_tags'
