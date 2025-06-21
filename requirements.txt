@@ -1,5 +1,8 @@
 fastapi
 uvicorn[standard]
 SQLAlchemy
-aiomysql
 databases[mysql]
+aiomysql
+pydantic[email]
+python-dotenv
+email-validator
