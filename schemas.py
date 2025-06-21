@@ -36,23 +36,29 @@ class CommentOut(BaseModel):
     text: str
     created_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+    "from_attributes": True
+}
+
 
 class AuthorOut(BaseModel):
     id: UUID
     name: str
     username: str
-    class Config:
-        orm_mode = True
+    model_config = {
+    "from_attributes": True
+}
+
 class ReportCommentRequest(BaseModel):
     reason: str
 class UserOut(BaseModel):
     username: str
 
 
-    class Config:
-        orm_mode = True
+    model_config = {
+    "from_attributes": True
+}
+
 
 class WorkOut(BaseModel):
     id: UUID
@@ -67,9 +73,10 @@ class WorkOut(BaseModel):
     age_limit: Optional[int]
     status_id: Optional[int]
 
-    class Config:
-        orm_mode = True
-        from_attributes = True
+    cmodel_config = {
+    "from_attributes": True
+}
+
 class ChapterCreate(BaseModel):
     title: str
     content: str
@@ -82,8 +89,10 @@ class ChapterSchema(BaseModel):
     content: str
     work_id: UUID
 
-    class Config:
-        orm_mode = True
+    model_config = {
+    "from_attributes": True
+}
+
 
 class ChapterUpdate(BaseModel):
     title: Optional[str] = None
@@ -97,8 +106,10 @@ class ChapterOut(BaseModel):
     num: int
     work_id: UUID
 
-    class Config:
-        orm_mode = True
+    model_config = {
+    "from_attributes": True
+}
+
 
 
 
@@ -124,8 +135,10 @@ class WorkUpdateSchema(BaseModel):
     age_limit: Optional[int]
     status_id: Optional[int]
 
-    class Config:
-        orm_mode=True
+    model_config = {
+    "from_attributes": True
+}
+
 
 class WorkResponseSchema(BaseModel):
     id: UUID
@@ -140,8 +153,10 @@ class WorkResponseSchema(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = {
+    "from_attributes": True
+}
+
 class UserProfileOut(BaseModel):
     id: str
     name: Optional[str]
@@ -153,8 +168,10 @@ class UserProfileOut(BaseModel):
     birth: Optional[int]
     bio: Optional[str]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+    "from_attributes": True
+}
+
 class InteractionStats(BaseModel):
     likes: int
     views: int
