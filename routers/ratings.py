@@ -3,7 +3,7 @@ from sqlalchemy import func
 from models import Rating
 import uuid
 
-def set_rating(db: Session, work_id: uuid.UUID, user_id: uuid.UUID, rating: int):
+def set_rating(db: Session, work_id: str, user_id: str, rating: int):
     """
     Додати або оновити оцінку користувача для твору.
     rating має бути від 1 до 5.
@@ -26,7 +26,7 @@ def set_rating(db: Session, work_id: uuid.UUID, user_id: uuid.UUID, rating: int)
     db.commit()
 
 
-def get_average_rating(db: Session, work_id: uuid.UUID) -> float:
+def get_average_rating(db: Session, work_id: str) -> float:
     """
     Повертає середню оцінку твору (float) або 0.0, якщо оцінок немає.
     """
@@ -34,7 +34,7 @@ def get_average_rating(db: Session, work_id: uuid.UUID) -> float:
     return float(avg) if avg is not None else 0.0
 
 
-def get_user_rating(db: Session, work_id: uuid.UUID, user_id: uuid.UUID) -> int | None:
+def get_user_rating(db: Session, work_id: str, user_id: str) -> int | None:
     """
     Повертає оцінку користувача для певного твору, або None, якщо оцінка відсутня.
     """

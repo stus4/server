@@ -13,13 +13,13 @@ router = APIRouter(prefix="/chapters", tags=["Chapters"])
 WORKS_DIR = "works"
 app = FastAPI()
 @router.get("/work/{work_id}", response_model=List[ChapterOut])
-def get_chapters_for_work(work_id: UUID, db: Session = Depends(get_db)):
+def get_chapters_for_work(work_id: str, db: Session = Depends(get_db)):
     """Отримання списку розділів твору"""
     return db.query(Chapter).filter(Chapter.work_id == work_id).order_by(Chapter.num).all()
 
 
 @app.get("/chapters/{chapter_id}", response_model=ChapterOut)
-async def get_chapter(chapter_id: UUID, db: Session = Depends(get_db)):
+async def get_chapter(chapter_id: str, db: Session = Depends(get_db)):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
@@ -46,7 +46,7 @@ WORKS_DIR = "works"
 def create_chapter(
     chapter_data: ChapterCreate,
     db: Session = Depends(get_db),
-    current_user: UUID = Depends(get_current_user)
+    current_user: str = Depends(get_current_user)
 ):
     # Перевірка прав доступу
     work = db.query(Work).get(chapter_data.work_id)
@@ -97,7 +97,7 @@ def create_chapter(
 
 @router.put("/{chapter_id}", response_model=ChapterOut)
 def update_chapter(
-    chapter_id: UUID,
+    chapter_id: str,
     chapter_data: ChapterUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -121,7 +121,7 @@ def update_chapter(
 
 @router.delete("/{chapter_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_chapter(
-    chapter_id: UUID,
+    chapter_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

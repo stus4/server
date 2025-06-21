@@ -62,7 +62,7 @@ def get_all_works(db: Session = Depends(get_sync_db)):
 
 
 @router.get("/{work_id}", response_model=WorkResponseSchema)
-def get_work(work_id: UUID, db: Session = Depends(get_sync_db)):
+def get_work(work_id: str, db: Session = Depends(get_sync_db)):
     work = db.query(Work).filter(Work.id == work_id).first()
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
@@ -70,7 +70,7 @@ def get_work(work_id: UUID, db: Session = Depends(get_sync_db)):
 
 
 @router.put("/{work_id}", response_model=WorkResponseSchema)
-def update_work(work_id: UUID, update_data: WorkUpdateSchema, db: Session = Depends(get_sync_db)):
+def update_work(work_id: str, update_data: WorkUpdateSchema, db: Session = Depends(get_sync_db)):
     work = db.query(Work).filter(Work.id == work_id).first()
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")
@@ -99,7 +99,7 @@ def update_work(work_id: UUID, update_data: WorkUpdateSchema, db: Session = Depe
 
 
 @router.delete("/{work_id}")
-def delete_work(work_id: UUID, db: Session = Depends(get_sync_db)):
+def delete_work(work_id: str, db: Session = Depends(get_sync_db)):
     work = db.query(Work).filter(Work.id == work_id).first()
     if not work:
         raise HTTPException(status_code=404, detail="Work not found")

@@ -10,7 +10,7 @@ from schemas import InteractionStats
 router = APIRouter(prefix="/interactions", tags=["User Interactions"])
 
 @router.post("/{work_id}/like")
-def toggle_like(work_id: UUID, user_id: UUID = Body(...), db: Session = Depends(get_db)):
+def toggle_like(work_id: str, user_id: str = Body(...), db: Session = Depends(get_db)):
     interaction = db.query(UserInteraction).filter_by(user_id=user_id, work_id=work_id).first()
 
     if interaction:
@@ -34,7 +34,7 @@ def toggle_like(work_id: UUID, user_id: UUID = Body(...), db: Session = Depends(
     }
 
 @router.post("/{work_id}/save")
-def toggle_save(work_id: UUID, db: Session = Depends(get_db), current_user: UUID = Depends(get_current_user_id)):
+def toggle_save(work_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user_id)):
     interaction = db.query(UserInteraction).filter_by(user_id=current_user, work_id=work_id).first()
 
     if interaction:
@@ -54,8 +54,8 @@ def toggle_save(work_id: UUID, db: Session = Depends(get_db), current_user: UUID
 
 @router.get("/{work_id}/status")
 def get_interaction_status(
-    work_id: UUID,
-    user_id: UUID = Query(...),  # ← приймаємо user_id з параметрів
+    work_id: str,
+    user_id: str = Query(...),  # ← приймаємо user_id з параметрів
     db: Session = Depends(get_db)
 ):
     interaction = db.query(UserInteraction).filter_by(user_id=user_id, work_id=work_id).first()
@@ -75,8 +75,8 @@ def get_interaction_status(
     }
 @router.post("/{work_id}/view")
 def mark_as_viewed(
-    work_id: UUID,
-    user_id: UUID = Query(...),
+    work_id: str,
+    user_id: str = Query(...),
     db: Session = Depends(get_db)
 ):
     interaction = db.query(UserInteraction).filter_by(work_id=work_id, user_id=user_id).first()

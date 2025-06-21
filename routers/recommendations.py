@@ -122,10 +122,10 @@ async def get_recommendations(user_id: str, db: Session = Depends(get_db)):
             read = count_reads(db, work_with_details.id)
 
             # ✅ Виклики перевірки взаємодії
-            is_liked = has_interacted(db, UUID(user_id), work_with_details.id, "like")
-            is_saved = has_interacted(db, UUID(user_id), work_with_details.id, "save")
-            is_viewed = has_interacted(db, UUID(user_id), work_with_details.id, "view")
-            is_read = has_interacted(db, UUID(user_id), work_with_details.id, "read")
+            is_liked = has_interacted(db, str(user_id), work_with_details.id, "like")
+            is_saved = has_interacted(db, str(user_id), work_with_details.id, "save")
+            is_viewed = has_interacted(db, str(user_id), work_with_details.id, "view")
+            is_read = has_interacted(db, str(user_id), work_with_details.id, "read")
 
             work_data = {
                 "id": str(work_with_details.id),

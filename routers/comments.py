@@ -42,8 +42,8 @@ def add_comment(
 
 @router.get("/", response_model=List[CommentOut])
 def get_comments(
-    work_id: Optional[UUID] = Query(default=None),
-    chapter_id: Optional[UUID] = Query(default=None),
+    work_id: Optional[str] = Query(default=None),
+    chapter_id: Optional[str] = Query(default=None),
     db: Session = Depends(get_db)
 ):
     """Перегляд коментарів для твору або розділу"""
@@ -59,7 +59,7 @@ def get_comments(
 
 @router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_comment(
-    comment_id: UUID,
+    comment_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -78,7 +78,7 @@ def delete_comment(
 
 @router.post("/{comment_id}/report", status_code=status.HTTP_202_ACCEPTED)
 def report_comment(
-    comment_id: UUID,
+    comment_id: str,
     report: ReportCommentRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

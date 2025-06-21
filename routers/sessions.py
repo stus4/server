@@ -6,13 +6,13 @@ from models import User
 
 SESSION_DURATION_HOURS = 24  # тривалість сесії
 
-def create_session(db: Session, user_id: uuid.UUID, ip_address: str = None, user_agent: str = None) -> SessionModel:
+def create_session(db: Session, user_id: str, ip_address: str = None, user_agent: str = None) -> SessionModel:
     """
     Генерує нову сесію для користувача.
     """
     now = datetime.utcnow()
     session = SessionModel(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         user_id=user_id,
         created_at=now,
         expires_at=now + timedelta(hours=SESSION_DURATION_HOURS),
@@ -24,7 +24,7 @@ def create_session(db: Session, user_id: uuid.UUID, ip_address: str = None, user
     db.refresh(session)
     return session
 
-def refresh_session(db: Session, session_id: uuid.UUID) -> bool:
+def refresh_session(db: Session, session_id: str) -> bool:
     """
     Оновлює час дії сесії, продовжуючи її життя.
     Повертає True якщо сесія існує та оновлена, False якщо сесії немає.
@@ -38,7 +38,7 @@ def refresh_session(db: Session, session_id: uuid.UUID) -> bool:
     db.commit()
     return True
 
-def validate_session(db: Session, session_id: uuid.UUID) -> bool:
+def validate_session(db: Session, session_id: str) -> bool:
     """
     Перевіряє чи існує сесія і чи не закінчився її час.
     """
@@ -49,7 +49,7 @@ def validate_session(db: Session, session_id: uuid.UUID) -> bool:
     ).first()
     return session is not None
 
-def logout_session(db: Session, session_id: uuid.UUID) -> bool:
+def logout_session(db: Session, session_id: str) -> bool:
     """
     Видаляє сесію (вихід з системи).
     Повертає True якщо сесія видалена, False якщо сесії не було.

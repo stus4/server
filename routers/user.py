@@ -55,7 +55,7 @@ def get_user_profile(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/saved_works/{user_id}")
-def get_saved_works(user_id: UUID, db: Session = Depends(get_db)):
+def get_saved_works(user_id: str, db: Session = Depends(get_db)):
     try:
         saved_interactions = db.query(UserInteraction).options(
             joinedload(UserInteraction.work).joinedload(Work.author_user)
@@ -75,7 +75,7 @@ def get_saved_works(user_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Помилка сервера при отриманні збережених робіт")
 
 @router.get("/liked_works/{user_id}")
-def get_liked_works(user_id: UUID, db: Session = Depends(get_db)):
+def get_liked_works(user_id: str, db: Session = Depends(get_db)):
     try:
         liked_interactions = db.query(UserInteraction).options(
             joinedload(UserInteraction.work).joinedload(Work.author_user)
@@ -94,7 +94,7 @@ def get_liked_works(user_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Помилка сервера при отриманні уподобаних робіт")
 
 @router.get("/history/{user_id}")
-def get_history(user_id: UUID, db: Session = Depends(get_db)):
+def get_history(user_id: str, db: Session = Depends(get_db)):
     try:
         viewed_interactions = db.query(UserInteraction).options(
             joinedload(UserInteraction.work).joinedload(Work.author_user)

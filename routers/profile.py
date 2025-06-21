@@ -1,21 +1,19 @@
 from sqlalchemy.orm import Session
 from models import User, Work, UserInteraction, Comment
-import uuid
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from database import get_db
 from schemas import UserProfileOut
-router = APIRouter()
 
+router = APIRouter()
 
 @router.get("/me", response_model=UserProfileOut, description="Отримати профіль користувача за user_id")
 def read_current_user(user_id: str = Query(..., description="UUID користувача"), db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
+    # Перевірка формату user_id — просто перевірка рядка, без конвертації в UUID
+    if not isinstance(user_id, str) or len(user_id) == 0:
         raise HTTPException(status_code=400, detail="Invalid user_id format")
 
-    user = get_user_profile(db, user_uuid)
+    user = get_user_profile(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -30,34 +28,31 @@ def read_current_user(user_id: str = Query(..., description="UUID користу
         "birth": user.birth,
         "bio": user.bio
     }
+
 @router.get("/me/id")
 def get_current_user_id(user_id: str, db: Session = Depends(get_db)):
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except ValueError:
+    if not isinstance(user_id, str) or len(user_id) == 0:
         raise HTTPException(status_code=400, detail="Invalid user_id format")
 
-    user = get_user_profile(db, user_uuid)
+    user = get_user_profile(db, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     return user.id
 
-def get_user_profile(db: Session, user_id: uuid.UUID) -> Optional[User]:
+def get_user_profile(db: Session, user_id: str) -> Optional[User]:
     """
-    Отримати інформацію про користувача (аватар, біо та інші поля).
-    Повертає None, якщо користувача не знайдено.
+    Отримати інформацію про користувача.
     """
     return db.query(User).filter(User.id == user_id).first()
 
-
-def update_user_profile(db: Session, user_id: uuid.UUID, name: Optional[str] = None,
+def update_user_profile(db: Session, user_id: str, name: Optional[str] = None,
                         last_name: Optional[str] = None, username: Optional[str] = None,
                         email: Optional[str] = None, phone_number: Optional[str] = None,
                         avatar_path: Optional[str] = None, birth: Optional[int] = None,
                         bio: Optional[str] = None):
     """
-    Оновити профіль користувача. Передаються тільки ті поля, які потрібно змінити.
+    Оновити профіль користувача.
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -83,15 +78,13 @@ def update_user_profile(db: Session, user_id: uuid.UUID, name: Optional[str] = N
     db.commit()
     return user
 
-
-def get_own_works(db: Session, user_id: uuid.UUID) -> List[Work]:
+def get_own_works(db: Session, user_id: str) -> List[Work]:
     """
     Отримати список власних творів користувача.
     """
     return db.query(Work).filter(Work.author == user_id).all()
 
-
-def get_saved_works(db: Session, user_id: uuid.UUID) -> List[Work]:
+def get_saved_works(db: Session, user_id: str) -> List[Work]:
     """
     Отримати список творів, які користувач зберіг (is_saved=True).
     """
@@ -102,8 +95,7 @@ def get_saved_works(db: Session, user_id: uuid.UUID) -> List[Work]:
         .all()
     )
 
-
-def get_liked_works(db: Session, user_id: uuid.UUID) -> List[Work]:
+def get_liked_works(db: Session, user_id: str) -> List[Work]:
     """
     Отримати список творів, які користувач лайкнув (is_liked=True).
     """
@@ -114,7 +106,7 @@ def get_liked_works(db: Session, user_id: uuid.UUID) -> List[Work]:
         .all()
     )
 
-def get_viewed_works(db: Session, user_id: uuid.UUID) -> List[Work]:
+def get_viewed_works(db: Session, user_id: str) -> List[Work]:
     """
     Отримати список творів, які користувач переглянув (is_viewed=True).
     """
@@ -127,7 +119,7 @@ def get_viewed_works(db: Session, user_id: uuid.UUID) -> List[Work]:
 
 from models import Chapter
 
-def get_commented_works(db: Session, user_id: uuid.UUID) -> List[Work]:
+def get_commented_works(db: Session, user_id: str) -> List[Work]:
     """
     Отримати список творів, в яких користувач залишив коментарі.
     """
@@ -140,8 +132,7 @@ def get_commented_works(db: Session, user_id: uuid.UUID) -> List[Work]:
         .all()
     )
 
-
-def has_interacted(db: Session, user_id: uuid.UUID, work_id: uuid.UUID, interaction_type: str) -> bool:
+def has_interacted(db: Session, user_id: str, work_id: str, interaction_type: str) -> bool:
     interaction = db.query(UserInteraction).filter_by(
         user_id=user_id,
         work_id=work_id

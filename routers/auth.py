@@ -41,7 +41,7 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="Невірний формат дати народження.")
 
     new_user = User(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         name=request.name,
         last_name=request.last_name,
         username=request.username,
