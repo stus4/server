@@ -4,7 +4,9 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from database import get_db
 from schemas import UserProfileOut
+from sqlalchemy.orm import joinedload
 
+from typing import List
 router = APIRouter()
 
 @router.get("/me", response_model=UserProfileOut, description="Отримати профіль користувача за user_id")
@@ -84,17 +86,56 @@ def get_own_works(db: Session, user_id: str) -> List[Work]:
     """
     return db.query(Work).filter(Work.author == user_id).all()
 
-def get_saved_works(db: Session, user_id: str) -> List[Work]:
-    """
-    Отримати список творів, які користувач зберіг (is_saved=True).
-    """
-    return (
-        db.query(Work)
-        .join(UserInteraction, UserInteraction.work_id == Work.id)
-        .filter(UserInteraction.user_id == user_id, UserInteraction.is_saved == True)
-        .all()
-    )
 
+def get_saved_works(db: Session, user_id: str) -> List[dict]:
+    """
+    Отримати список творів, які користувач зберіг (is_saved=True), у форматі словників.
+    """
+    interactions = db.query(UserInteraction)\
+        .options(
+            joinedload(UserInteraction.work)
+            .joinedload(Work.category),
+            joinedload(UserInteraction.work)
+            .joinedload(Work.status),
+            joinedload(UserInteraction.work)
+            .joinedload(Work.tags),
+            joinedload(UserInteraction.work)
+            .joinedload(Work.author_user)
+        )\
+        .filter(UserInteraction.user_id == user_id, UserInteraction.is_saved == True)\
+        .all()
+
+    result = []
+    for interaction in interactions:
+        work = interaction.work
+        result.append({
+            "id": work.id,
+            "title": work.title,
+            "description": work.description,
+            "cover_path": work.cover_path,
+            "file_path": work.file_path,
+            "created_at": work.created_at,
+            "updated_at": work.updated_at,
+            "age_limit": work.age_limit,
+            "category": {
+                "id": work.category.id,
+                "name": work.category.name,
+                "description": work.category.description
+            } if work.category else None,
+            "status": {
+                "id": work.status.id,
+                "name": work.status.name
+            } if work.status else None,
+            "tags": [{"id": tag.id, "name": tag.name} for tag in work.tags],
+            "author": {
+                "id": work.author_user.id,
+                "name": work.author_user.name,
+                "last_name": work.author_user.last_name,
+                "username": work.author_user.username,
+                "avatar_path": work.author_user.avatar_path
+            } if work.author_user else None
+        })
+    return result
 def get_liked_works(db: Session, user_id: str) -> List[Work]:
     """
     Отримати список творів, які користувач лайкнув (is_liked=True).

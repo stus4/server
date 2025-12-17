@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Category, Tag, WorkStatus, UserInteraction
-from .profile import get_viewed_works, get_saved_works
+from .user_profile import get_viewed_works, get_saved_works
+from .search import search_works
+from crud import get_liked_works
 from typing import List, Optional
 from schemas import WorkOut
-from uuid import UUID
-from .search import search_works
 from sqlalchemy import func
 from fastapi.responses import JSONResponse
+
+
 def get_interaction_stats(db: Session, work_id: str) -> dict:
     return {
         "likes": count_likes(db, work_id),
@@ -51,7 +53,19 @@ def get_categories(db: Session = Depends(get_db)):
 @router.get("/tags")
 def get_tags(db: Session = Depends(get_db)):
     tags = db.query(Tag).all()
-    return [{"id": t.id, "name": t.name, "description": t.description} for t in tags]
+    result = []
+    for t in tags:
+        result.append({
+            "id": t.id,
+            "name": t.name,
+            "description": t.description,
+            "category_name": t.category.name if t.category else None
+        })
+    return result
+
+@router.get("/users/{user_id}/liked")
+def liked_works(user_id: str, db: Session = Depends(get_db)):
+    return get_liked_works(db, user_id)
 
 @router.get("/work-statuses")
 def get_work_statuses(db: Session = Depends(get_db)):
@@ -59,19 +73,14 @@ def get_work_statuses(db: Session = Depends(get_db)):
     return [{"id": s.id, "name": s.name} for s in statuses]
 
 
-@router.get("/liked/{user_id}", response_model=List[WorkOut], description="Отримати список лайкнутих творів користувача")
-def get_liked(user_id: str, db: Session = Depends(get_db)):
-    works = get_liked_works(db, user_id)
-    if works is None:
+
+@router.get("/saved/{user_id}", description="Отримати список збережених творів користувача")
+def get_saved(user_id: str, db: Session = Depends(get_db)):
+    works = get_saved_works(db, user_id)
+    if not works:
         raise HTTPException(status_code=404, detail="Works not found")
     return works
 
-@router.get("/saved/{user_id}", response_model=List[WorkOut], description="Отримати список збережених творів користувача")
-def get_saved(user_id: str, db: Session = Depends(get_db)):
-    works = get_saved_works(db, user_id)
-    if works is None:
-        raise HTTPException(status_code=404, detail="Works not found")
-    return works
 
 @router.get("/search", response_model=List[WorkOut])
 def search_works_endpoint(

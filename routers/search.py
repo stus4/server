@@ -1,10 +1,11 @@
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func, desc, and_, or_
+from sqlalchemy import func, desc, or_
 from models import Work, User, Tag, WorkTag, Rating
 from typing import List, Optional
 from fastapi import APIRouter, Depends
-from schemas import WorkOut
 from database import get_db
+
+router = APIRouter(prefix="/search", tags=["Search"])
 
 def search_works(db: Session,
                  title: Optional[str] = None,
@@ -15,50 +16,42 @@ def search_works(db: Session,
                  order_by_popularity: bool = False) -> List[Work]:
 
     query = db.query(Work).options(
-        joinedload(Work.author_user)  # Завантажуємо пов'язаного автора
+        joinedload(Work.author_user),
+        joinedload(Work.category),
+        joinedload(Work.status),
+        joinedload(Work.tags)
     )
 
-    # Пошук за назвою
     if title:
         query = query.filter(Work.title.ilike(f"%{title}%"))
 
-    # Пошук за автором (ім'я або username)
     if author_name:
-        # Припускаємо, що у Work є relationship author -> User
         query = query.join(Work.author_user).filter(
-    or_(
-        User.name.ilike(f"%{author_name}%"),
-        User.username.ilike(f"%{author_name}%")
-    )
-)
+            or_(
+                User.name.ilike(f"%{author_name}%"),
+                User.username.ilike(f"%{author_name}%")
+            )
+        )
 
-
-    # Фільтр за жанром
     if genre_id:
         query = query.filter(Work.category_id == genre_id)
 
-    # Фільтр за статусом
     if status_id:
         query = query.filter(Work.status_id == status_id)
 
-    # Фільтр за тегами (твір має містити ВСІ теги з tag_names)
     if tag_names:
-        # Приєднуємо таблиці тегів
         query = query.join(WorkTag).join(Tag)
-        # Фільтруємо теги, які відповідають списку
         query = query.filter(Tag.name.in_(tag_names))
-        # Групуємо по твору і відбираємо ті, у яких кількість тегів співпадає з довжиною списку тегів
         query = query.group_by(Work.id).having(func.count(Tag.id) == len(tag_names))
 
-    # Сортування за популярністю (середній рейтинг)
     if order_by_popularity:
         avg_rating = func.avg(Rating.rating)
         query = query.outerjoin(Rating).group_by(Work.id).order_by(desc(avg_rating))
 
     return query.all()
 
-router = APIRouter(prefix="/search", tags=["Search"])
-@router.get("/search", response_model=List[WorkOut])
+
+@router.get("/search")
 def search_works_route(
     title: Optional[str] = None,
     author_name: Optional[str] = None,
@@ -68,7 +61,7 @@ def search_works_route(
     order_by_popularity: bool = False,
     db: Session = Depends(get_db),
 ):
-    return search_works(
+    works = search_works(
         db=db,
         title=title,
         author_name=author_name,
@@ -78,3 +71,33 @@ def search_works_route(
         order_by_popularity=order_by_popularity
     )
 
+    result = []
+    for work in works:
+        result.append({
+            "id": work.id,
+            "title": work.title,
+            "description": work.description,
+            "cover_path": work.cover_path,
+            "file_path": work.file_path,
+            "created_at": work.created_at,
+            "updated_at": work.updated_at,
+            "age_limit": work.age_limit,
+            "category": {
+                "id": work.category.id,
+                "name": work.category.name,
+                "description": work.category.description
+            } if work.category else None,
+            "status": {
+                "id": work.status.id,
+                "name": work.status.name
+            } if work.status else None,
+            "tags": [{"id": tag.id, "name": tag.name} for tag in work.tags],
+            "author": {
+                "id": work.author_user.id,
+                "name": work.author_user.name,
+                "last_name": work.author_user.last_name,
+                "username": work.author_user.username,
+                "avatar_path": work.author_user.avatar_path
+            } if work.author_user else None
+        })
+    return result

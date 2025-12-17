@@ -1,97 +1,110 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Query
-from sqlalchemy.orm import Session
-from uuid import UUID
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session, joinedload
 from database import get_db
 from models import UserInteraction, Work
-from .profile import get_current_user_id
-from .work_metadata import get_interaction_stats
-from schemas import InteractionStats
+from .user_profile import get_current_user_id
+from uuid import UUID
+from schemas import WorkResponseSchema
+from typing import List
+
 
 router = APIRouter(prefix="/interactions", tags=["User Interactions"])
 
-@router.post("/{work_id}/like")
-def toggle_like(work_id: str, user_id: str = Body(...), db: Session = Depends(get_db)):
+
+def get_or_create_interaction(db: Session, user_id: str, work_id: str) -> UserInteraction:
+    """Повертає існуючу взаємодію користувача з твором або створює нову"""
     interaction = db.query(UserInteraction).filter_by(user_id=user_id, work_id=work_id).first()
-
-    if interaction:
-        interaction.is_liked = not interaction.is_liked
-        action = "прибрав лайк" if not interaction.is_liked else "поставив лайк"
-        print(f"Користувач {user_id} {action} твору {work_id}")
-    else:
-        interaction = UserInteraction(
-            user_id=user_id,
-            work_id=work_id,
-            is_liked=True
-        )
+    if not interaction:
+        interaction = UserInteraction(user_id=user_id, work_id=work_id)
         db.add(interaction)
-        print(f"Користувач {user_id} поставив лайк твору {work_id}")
+        db.commit()
+        db.refresh(interaction)
+    return interaction
 
+
+@router.post("/{work_id}/like")
+def toggle_like(
+    work_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user_id)
+):
+    interaction = get_or_create_interaction(db, current_user, work_id)
+    interaction.is_liked = not interaction.is_liked
     db.commit()
 
     likes = db.query(UserInteraction).filter_by(work_id=work_id, is_liked=True).count()
-    return {
-        "likes": likes,
-    }
+    return {"likes": likes, "is_liked": interaction.is_liked}
+
 
 @router.post("/{work_id}/save")
-def toggle_save(work_id: str, db: Session = Depends(get_db), current_user: str = Depends(get_current_user_id)):
-    interaction = db.query(UserInteraction).filter_by(user_id=current_user, work_id=work_id).first()
-
-    if interaction:
-        interaction.is_saved = not interaction.is_saved
-    else:
-        interaction = UserInteraction(
-            user_id=current_user,
-            work_id=work_id,
-            is_saved=True
-        )
-        db.add(interaction)
-
+def toggle_save(
+    work_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user_id)
+):
+    interaction = get_or_create_interaction(db, current_user, work_id)
+    interaction.is_saved = not interaction.is_saved
     db.commit()
 
     saved = db.query(UserInteraction).filter_by(work_id=work_id, is_saved=True).count()
-    return {"saved": saved}
+    return {"saved": saved, "is_saved": interaction.is_saved}
+
+
+@router.post("/{work_id}/view")
+def mark_as_viewed(
+    work_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user_id)
+):
+    interaction = get_or_create_interaction(db, current_user, work_id)
+    if not interaction.is_viewed:
+        interaction.is_viewed = True
+        db.commit()
+
+    return {"message": "Viewed status recorded", "is_viewed": interaction.is_viewed}
+
+
+
+@router.post("/{work_id}/read")
+def mark_as_read(
+    work_id: str,
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user_id)
+):
+    """Позначити твір як прочитаний"""
+    if not is_valid_uuid(work_id):
+        raise HTTPException(status_code=400, detail="Invalid work_id format")
+    if not is_valid_uuid(current_user):
+        raise HTTPException(status_code=400, detail="Invalid user_id format")
+
+    interaction = get_or_create_interaction(db, current_user, work_id)
+    if not interaction.is_read:
+        interaction.is_read = True
+        db.commit()
+
+    return {"message": "Read status recorded", "is_read": interaction.is_read}
+
 
 @router.get("/{work_id}/status")
 def get_interaction_status(
     work_id: str,
-    user_id: str = Query(...),  # ← приймаємо user_id з параметрів
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user_id)
 ):
-    interaction = db.query(UserInteraction).filter_by(user_id=user_id, work_id=work_id).first()
-
-    total_likes = db.query(UserInteraction).filter_by(work_id=work_id, is_liked=True).count()
-    total_views = db.query(UserInteraction).filter_by(work_id=work_id, is_viewed=True).count()
-    total_reads = db.query(UserInteraction).filter_by(work_id=work_id, is_read=True).count()
-    total_saved = db.query(UserInteraction).filter_by(work_id=work_id, is_saved=True).count()
+    interaction = db.query(UserInteraction).filter_by(user_id=current_user, work_id=work_id).first()
 
     return {
-        "likes": total_likes,
-        "views": total_views,
-        "reads": total_reads,
-        "saved": total_saved,
+        "likes": db.query(UserInteraction).filter_by(work_id=work_id, is_liked=True).count(),
+        "views": db.query(UserInteraction).filter_by(work_id=work_id, is_viewed=True).count(),
+        "reads": db.query(UserInteraction).filter_by(work_id=work_id, is_read=True).count(),
+        "saved": db.query(UserInteraction).filter_by(work_id=work_id, is_saved=True).count(),
         "is_liked": interaction.is_liked if interaction else False,
-        "is_saved": interaction.is_saved if interaction else False
+        "is_saved": interaction.is_saved if interaction else False,
+        "is_viewed": interaction.is_viewed if interaction else False
     }
-@router.post("/{work_id}/view")
-def mark_as_viewed(
-    work_id: str,
-    user_id: str = Query(...),
-    db: Session = Depends(get_db)
-):
-    interaction = db.query(UserInteraction).filter_by(work_id=work_id, user_id=user_id).first()
-
-    if interaction:
-        if not interaction.is_viewed:
-            interaction.is_viewed = True
-            db.commit()
-    else:
-        new_interaction = UserInteraction(
-            work_id=work_id,
-            user_id=user_id,
-            is_viewed=True
-        )
-        db.add(new_interaction)
-        db.commit()
-
-    return {"message": "Viewed status recorded"}
+def is_valid_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+        return True
+    except ValueError:
+        return False

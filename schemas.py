@@ -1,8 +1,25 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from typing import ClassVar
+from typing import ClassVar, Optional
+
+class SessionCreate(BaseModel):
+    user_id: str
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+    expires_at: Optional[datetime]
+
+class SessionResponse(BaseModel):
+    id: str
+    user_id: str
+    created_at: datetime
+    expires_at: datetime
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+
+    class Config:
+        orm_mode = True
 
 
 class LoginRequest(BaseModel):
@@ -60,7 +77,20 @@ class AuthorOut(BaseModel):
 class ReportCommentRequest(BaseModel):
     reason: str
 
+class CommentReportCreate(BaseModel):
+    comment_id: int
+    reason: str
 
+
+class CommentReportResponse(BaseModel):
+    id: int
+    comment_id: int
+    user_id: Optional[str]
+    reason: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 class UserOut(BaseModel):
     username: str
 
@@ -149,14 +179,37 @@ class WorkUpdateSchema(BaseModel):
         "from_attributes": True
     }
 
+class CategoryOut(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
 
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
+
+class WorkStatusOut(BaseModel):
+    id: int
+    name: str
+
+    model_config: ClassVar[dict] = {"from_attributes": True}
+
+class AuthorOut(BaseModel):
+    id: str
+    name: str
+    username: str
+
+    model_config: ClassVar[dict] = {
+        "from_attributes": True
+    }
+# schemas.py
 class WorkResponseSchema(BaseModel):
     id: str
     title: str
     description: Optional[str]
     cover_path: Optional[str]
     file_path: Optional[str]
-    category_id: Optional[int]
+    category: Optional[int]  # замість category_id
     status_id: Optional[int]
     age_limit: Optional[int]
     author: str
@@ -166,6 +219,8 @@ class WorkResponseSchema(BaseModel):
     model_config: ClassVar[dict] = {
         "from_attributes": True
     }
+
+
 
 
 class UserProfileOut(BaseModel):
@@ -189,3 +244,52 @@ class InteractionStats(BaseModel):
     views: int
     reads: int
     saved: int
+class RatingCreate(BaseModel):
+    work_id: str
+    rating: int = Field(..., ge=1, le=5)  # ⭐ 1–5
+
+class RatingUpdate(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+
+class RatingOut(BaseModel):
+    id: int
+    work_id: str
+    user_id: str
+    rating: int
+
+    class Config:
+        from_attributes = True
+
+class RatingResponse(BaseModel):
+    id: int
+    work_id: UUID
+    user_id: UUID
+    rating: int
+
+    class Config:
+        orm_mode = True
+class IdeaCreate(BaseModel):
+    title: str
+    description: str
+
+class IdeaResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    title: str
+    description: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+class IdeaWorkCreate(BaseModel):
+    idea_id: UUID
+    work_id: UUID
+
+class IdeaWorkResponse(BaseModel):
+    id: UUID
+    idea_id: UUID
+    work_id: UUID
+
+    class Config:
+        orm_mode = True
+WorkResponseSchema.model_rebuild()

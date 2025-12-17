@@ -1,63 +1,57 @@
-import uuid
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy.orm import Session as DbSession
 from datetime import datetime, timedelta
+import uuid
 from sqlalchemy.orm import Session
-from models import Session as SessionModel  # твій клас Session з models.py
-from models import User
+from database import get_db
+from models import Session as SessionModel, User
+from schemas import SessionCreate, SessionResponse  # Потрібно створити відповідні Pydantic схеми
+from .user_profile import get_current_user_id as get_current_user # залежність для отримання поточного користувача
 
-SESSION_DURATION_HOURS = 24  # тривалість сесії
-
-def create_session(db: Session, user_id: str, ip_address: str = None, user_agent: str = None) -> SessionModel:
-    """
-    Генерує нову сесію для користувача.
-    """
-    now = datetime.utcnow()
-    session = SessionModel(
-        id=str(uuid.uuid4()),
-        user_id=user_id,
-        created_at=now,
-        expires_at=now + timedelta(hours=SESSION_DURATION_HOURS),
-        ip_address=ip_address,
-        user_agent=user_agent
+router = APIRouter(prefix="/sessions", tags=["sessions"])
+@router.post("/sessions")
+def create_session(session: SessionCreate, db: Session = Depends(get_db)):
+    new_session = SessionModel(
+        user_id=session.user_id,
+        ip_address=session.ip_address,
+        user_agent=session.user_agent,
+        expires_at=session.expires_at or datetime.utcnow()
     )
-    db.add(session)
+    db.add(new_session)
     db.commit()
-    db.refresh(session)
-    return session
+    db.refresh(new_session)
+    return new_session
+# --- Отримання сесій користувача ---
+@router.get("/user/{user_id}", response_model=list[SessionResponse])
+def get_user_sessions(user_id: str, db: DbSession = Depends(get_db)):
+    sessions = db.query(SessionModel).filter_by(user_id=user_id).all()
+    return sessions
 
-def refresh_session(db: Session, session_id: str) -> bool:
-    """
-    Оновлює час дії сесії, продовжуючи її життя.
-    Повертає True якщо сесія існує та оновлена, False якщо сесії немає.
-    """
-    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+
+# --- Перевірка дійсності сесії ---
+@router.get("/validate/{session_id}")
+def validate_session(session_id: str, db: DbSession = Depends(get_db)):
+    session = db.query(SessionModel).filter_by(id=session_id).first()
     if not session:
-        return False
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    is_valid = session.expires_at > datetime.utcnow()
+    return {"session_id": session.id, "valid": is_valid}
 
-    now = datetime.utcnow()
-    session.expires_at = now + timedelta(hours=SESSION_DURATION_HOURS)
-    db.commit()
-    return True
 
-def validate_session(db: Session, session_id: str) -> bool:
-    """
-    Перевіряє чи існує сесія і чи не закінчився її час.
-    """
-    now = datetime.utcnow()
-    session = db.query(SessionModel).filter(
-        SessionModel.id == session_id,
-        SessionModel.expires_at > now
-    ).first()
-    return session is not None
-
-def logout_session(db: Session, session_id: str) -> bool:
-    """
-    Видаляє сесію (вихід з системи).
-    Повертає True якщо сесія видалена, False якщо сесії не було.
-    """
-    session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
+# --- Видалення конкретної сесії (лог-аут) ---
+@router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_session(session_id: str, db: DbSession = Depends(get_db)):
+    session = db.query(SessionModel).filter_by(id=session_id).first()
     if not session:
-        return False
-
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
     db.delete(session)
     db.commit()
-    return True
+    return
+
+
+# --- Масове видалення сесій користувача ---
+@router.delete("/user/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_all_user_sessions(user_id: str, db: DbSession = Depends(get_db)):
+    db.query(SessionModel).filter_by(user_id=user_id).delete()
+    db.commit()
+    return

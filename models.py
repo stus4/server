@@ -1,8 +1,9 @@
-from sqlalchemy import Column, String, Integer, Text, Boolean, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, String, Integer, Text, Boolean, TIMESTAMP, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 import uuid
-
+from sqlalchemy.sql import func
+from datetime import datetime
 Base = declarative_base()
 
 class WorkStatus(Base):
@@ -27,6 +28,11 @@ class User(Base):
     interactions = relationship("UserInteraction", back_populates="user")
     comments = relationship("Comment", back_populates="user")
     sessions = relationship("Session", back_populates="user")
+    # models/user.py
+    comment_reports = relationship(
+        "CommentReport",
+        back_populates="user"
+    )
 
 class Category(Base):
     __tablename__ = 'categories'
@@ -98,21 +104,41 @@ class Comment(Base):
 
     user = relationship("User", back_populates="comments")
     chapter = relationship('Chapter')
+    reports = relationship(
+        "CommentReport",
+        back_populates="comment",
+        cascade="all, delete-orphan"
+    )
+class CommentReport(Base):
+    __tablename__ = "comment_reports"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    comment_id = Column(Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    reason = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.current_timestamp())
+
+    comment = relationship("Comment", back_populates="reports")
+    user = relationship("User", back_populates="comment_reports")
 
 class Rating(Base):
-    __tablename__ = 'ratings'
-    id = Column(Integer, primary_key=True)
-    work_id = Column(String(36), ForeignKey("works.id"))
-    user_id = Column(String(36), ForeignKey("users.id"))
+    __tablename__ = "ratings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    work_id = Column(String(36), ForeignKey("works.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     rating = Column(Integer, nullable=False)
 
     work = relationship("Work", back_populates="ratings")
+    user = relationship("User")
 
 class Tag(Base):
     __tablename__ = 'tags'
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
     description = Column(String)
+    category_id = Column(Integer, ForeignKey('categories.id'))  # додали поле для зв'язку
+    category = relationship("Category")
 
 class WorkTag(Base):
     __tablename__ = 'work_tags'
@@ -132,3 +158,30 @@ class Session(Base):
     user_agent = Column(Text)
 
     user = relationship("User", back_populates="sessions")
+
+class UserSubscription(Base):
+    __tablename__ = 'user_subscriptions'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    subscriber_id = Column(String(36), ForeignKey('users.id'), nullable=False)
+    subscribed_to_id = Column(String(36), ForeignKey('users.id'), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    subscriber = relationship('User', foreign_keys=[subscriber_id], backref='subscriptions')
+    subscribed_to = relationship('User', foreign_keys=[subscribed_to_id], backref='subscribers')
+
+class Idea(Base):
+    __tablename__ = "ideas"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+class IdeaWork(Base):
+    __tablename__ = "idea_works"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    idea_id = Column(String(36), ForeignKey("ideas.id", ondelete="CASCADE"), nullable=False)
+    work_id = Column(String(36), ForeignKey("works.id", ondelete="CASCADE"), nullable=False)
+

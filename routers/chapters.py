@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, FastAPI
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
-from .profile import get_current_user_id as get_current_user# якщо в profile.py є get_current_user
+from .user_profile import get_current_user_id as get_current_user# якщо в profile.py є get_current_user
 
 import os
 from models import Chapter, Work, User
@@ -108,8 +108,9 @@ def update_chapter(
         raise HTTPException(status_code=404, detail="Розділ не знайдено")
 
     work = db.query(Work).get(chapter.work_id)
-    if work.author_id != current_user.id:
+    if not work or work.author != current_user:
         raise HTTPException(status_code=403, detail="Ви не маєте прав на редагування")
+
 
     for key, value in chapter_data.dict(exclude_unset=True).items():
         setattr(chapter, key, value)
@@ -131,7 +132,7 @@ def delete_chapter(
         raise HTTPException(status_code=404, detail="Розділ не знайдено")
 
     work = db.query(Work).get(chapter.work_id)
-    if work.author_id != current_user.id:
+    if not work or work.author != current_user:
         raise HTTPException(status_code=403, detail="Ви не маєте прав на видалення")
 
     db.delete(chapter)
@@ -144,7 +145,7 @@ def save_draft(
     current_user: User = Depends(get_current_user),
 ):
     work = db.query(Work).get(chapter_data.work_id)
-    if not work or work.author_id != current_user.id:
+    if not work or work.author != current_user:
         raise HTTPException(status_code=403, detail="Ви не маєте прав на додавання розділу")
 
     new_chapter = Chapter(

@@ -12,7 +12,7 @@ from sqlalchemy.orm import joinedload
 import logging
 from routers.work_metadata import count_likes, count_views, count_reads, count_saves
 from uuid import UUID
-from .profile import has_interacted
+from .user_profile import has_interacted
 router = APIRouter()
 
 # 1. Матриця користувач-товар

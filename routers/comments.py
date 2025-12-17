@@ -1,100 +1,133 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from uuid import UUID
+from typing import List
+from datetime import datetime
 
-from models import Comment, User, Work, Chapter
 from database import get_db
-from schemas import CommentCreate, CommentOut, ReportCommentRequest
-from dependencies import get_current_user
+from models import Comment
+from pydantic import BaseModel
 
-router = APIRouter(prefix="/comments", tags=["Comments"])
+router = APIRouter(
+    prefix="/comments",
+    tags=["Comments"]
+)
+
+# ---------- Pydantic schemas ----------
+
+class CommentCreate(BaseModel):
+    user_id: str
+    chapter_id: str
+    text: str
 
 
-@router.post("/", response_model=CommentOut, status_code=status.HTTP_201_CREATED)
-def add_comment(
-    comment_data: CommentCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+class CommentUpdate(BaseModel):
+    text: str
+
+
+class CommentResponse(BaseModel):
+    id: int
+    user_id: str
+    chapter_id: str
+    text: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True  # pydantic v2
+
+
+# ---------- Endpoints ----------
+
+# ➕ Створити коментар
+@router.post(
+    "/",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def create_comment(
+    comment: CommentCreate,
+    db: Session = Depends(get_db)
 ):
-    """Додавання коментарів до творів або розділів"""
-    if not comment_data.work_id and not comment_data.chapter_id:
-        raise HTTPException(status_code=400, detail="Потрібно вказати або work_id, або chapter_id")
-
-    if comment_data.work_id:
-        if not db.query(Work).filter_by(id=comment_data.work_id).first():
-            raise HTTPException(status_code=404, detail="Твір не знайдено")
-    if comment_data.chapter_id:
-        if not db.query(Chapter).filter_by(id=comment_data.chapter_id).first():
-            raise HTTPException(status_code=404, detail="Розділ не знайдено")
-
-    comment = Comment(
-        user_id=current_user.id,
-        work_id=comment_data.work_id,
-        chapter_id=comment_data.chapter_id,
-        content=comment_data.content,
+    new_comment = Comment(
+        user_id=comment.user_id,
+        chapter_id=comment.chapter_id,
+        text=comment.text,
+        created_at=datetime.utcnow()
     )
-    db.add(comment)
+
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+    return new_comment
+
+
+# 📄 Отримати всі коментарі до розділу
+@router.get(
+    "/chapter/{chapter_id}",
+    response_model=List[CommentResponse]
+)
+def get_comments_by_chapter(
+    chapter_id: str,
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(Comment)
+        .filter(Comment.chapter_id == chapter_id)
+        .order_by(Comment.created_at.asc())
+        .all()
+    )
+
+
+# 📄 Отримати всі коментарі користувача
+@router.get(
+    "/user/{user_id}",
+    response_model=List[CommentResponse]
+)
+def get_comments_by_user(
+    user_id: str,
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(Comment)
+        .filter(Comment.user_id == user_id)
+        .order_by(Comment.created_at.desc())
+        .all()
+    )
+
+
+# ✏️ Оновити коментар
+@router.put(
+    "/{comment_id}",
+    response_model=CommentResponse
+)
+def update_comment(
+    comment_id: int,
+    data: CommentUpdate,
+    db: Session = Depends(get_db)
+):
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    comment.text = data.text
     db.commit()
     db.refresh(comment)
     return comment
 
 
-@router.get("/", response_model=List[CommentOut])
-def get_comments(
-    work_id: Optional[str] = Query(default=None),
-    chapter_id: Optional[str] = Query(default=None),
+# ❌ Видалити коментар
+@router.delete(
+    "/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+def delete_comment(
+    comment_id: int,
     db: Session = Depends(get_db)
 ):
-    """Перегляд коментарів для твору або розділу"""
-    query = db.query(Comment)
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
 
-    if work_id:
-        query = query.filter(Comment.work_id == work_id)
-    if chapter_id:
-        query = query.filter(Comment.chapter_id == chapter_id)
-
-    return query.order_by(Comment.created_at).all()
-
-
-@router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_comment(
-    comment_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Видалення коментаря (автором або модератором)"""
-    comment = db.query(Comment).get(comment_id)
     if not comment:
-        raise HTTPException(status_code=404, detail="Коментар не знайдено")
-
-    if comment.user_id != current_user.id and not current_user.is_moderator:
-        raise HTTPException(status_code=403, detail="Немає прав для видалення")
+        raise HTTPException(status_code=404, detail="Comment not found")
 
     db.delete(comment)
     db.commit()
-    return
-
-
-@router.post("/{comment_id}/report", status_code=status.HTTP_202_ACCEPTED)
-def report_comment(
-    comment_id: str,
-    report: ReportCommentRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Скарга на коментар"""
-    comment = db.query(Comment).get(comment_id)
-    if not comment:
-        raise HTTPException(status_code=404, detail="Коментар не знайдено")
-
-    # У таблиці скарг зберігаємо id користувача, коментаря, причину
-    db.execute(
-        """
-        INSERT INTO comment_reports (comment_id, user_id, reason)
-        VALUES (:comment_id, :user_id, :reason)
-        """,
-        {"comment_id": str(comment_id), "user_id": str(current_user.id), "reason": report.reason}
-    )
-    db.commit()
-    return {"message": "Скарга прийнята"}
