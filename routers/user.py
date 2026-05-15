@@ -52,7 +52,19 @@ def get_user_profile(user_id: str, db: Session = Depends(get_db)):
         media_type="application/json; charset=utf-8"
     )
 
+@router.get("/user/{user_id}")
+def get_user(user_id: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
 
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "userId": user.id,
+        "email": user.email,
+        "username": user.username,
+        "twofa_enabled": user.twofa_enabled
+    }
 
 @router.get("/saved_works/{user_id}")
 def get_saved_works(user_id: str, db: Session = Depends(get_db)):

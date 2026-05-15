@@ -17,19 +17,16 @@ def get_chapters_for_work(work_id: str, db: Session = Depends(get_db)):
     """Отримання списку розділів твору"""
     return db.query(Chapter).filter(Chapter.work_id == work_id).order_by(Chapter.num).all()
 
-
-@app.get("/chapters/{chapter_id}", response_model=ChapterOut)
+@router.get("/item/{chapter_id}", response_model=ChapterOut)
 async def get_chapter(chapter_id: str, db: Session = Depends(get_db)):
     chapter = db.query(Chapter).filter(Chapter.id == chapter_id).first()
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
 
-    # Зчитуємо текст з файлу
     try:
         with open(chapter.file_path, "r", encoding="utf-8") as f:
             content = f.read()
-    except Exception as e:
-        # Можеш обробити помилку, якщо файл не знайдений або інша проблема
+    except Exception:
         content = ""
 
     return ChapterOut(

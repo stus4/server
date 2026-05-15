@@ -23,7 +23,8 @@ class User(Base):
     avatar_path = Column(String(150))
     birth = Column(Integer)
     bio = Column(Text)
-
+    twofa_enabled = Column(Boolean, default=False)
+    twofa_secret = Column(String(255), nullable=True)
     works = relationship("Work", back_populates="author_user")
     interactions = relationship("UserInteraction", back_populates="user")
     comments = relationship("Comment", back_populates="user")
