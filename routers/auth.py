@@ -9,7 +9,12 @@ from io import BytesIO
 from fastapi.responses import StreamingResponse
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from fido2.webauthn import (
+    AuthenticatorAssertionResponse,
+    PublicKeyCredentialRequestOptions
+)
+from fido2.server import Fido2Server
+from fido2.webauthn import AttestationObject
 from database import get_db
 from models import User
 from schemas import LoginRequest, RegisterRequest
@@ -72,38 +77,24 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
         "message": "Успішна реєстрація",
         "userId": str(new_user.id)
     }
-
 @router.post('/login')
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    logging.info(f"[LOGIN] Спроба входу користувача: {request.email}")
-
     user = db.query(User).filter(User.email == request.email).first()
 
-    # 1. перевірка пароля
     if user is None or not verify_password(request.password, user.password):
-        logging.warning(f"[LOGIN] Невірний логін або пароль: {request.email}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Невірний логін або пароль",
-        )
+        raise HTTPException(status_code=401, detail="Невірний логін або пароль")
 
-    # 2. 🔐 перевірка 2FA
+    # 🔐 якщо є 2FA або passkey
     if user.twofa_enabled:
-        logging.info(f"[LOGIN] 2FA required for user: {user.email}")
-
         return {
             "success": True,
-            "message": "Потрібна двофакторна автентифікація",
             "need_2fa": True,
+            "methods": ["totp", "passkey"],
             "userId": str(user.id)
         }
 
-    # 3. якщо 2FA немає → звичайний логін
-    logging.info(f"[LOGIN] Успішний вхід без 2FA: {request.email}")
-
     return {
         "success": True,
-        "message": "Успішний вхід",
         "need_2fa": False,
         "userId": str(user.id)
     }
@@ -222,3 +213,105 @@ def disable_2fa(user_id: str, db: Session = Depends(get_db)):
         "success": True,
         "message": "2FA disabled"
     }
+from fido2.server import Fido2Server
+from fido2.webauthn import PublicKeyCredentialRpEntity
+
+rp = PublicKeyCredentialRpEntity(id="localhost", name="2read")
+fido2_server = Fido2Server(rp)
+
+active_challenges = {}
+@router.post("/passkey/register/begin")
+def passkey_register_begin(user_id: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    user_identity = {
+        "id": user.id.encode(),
+        "name": user.email,
+        "display_name": user.username
+    }
+
+    data, state = fido2_server.register_begin(
+        user_identity,
+        credentials=[]
+    )
+
+    active_challenges[f"reg:{user_id}"] = state
+
+    return data
+@router.post("/passkey/register/finish")
+def passkey_register_finish(
+    user_id: str,
+    client_data: dict,
+    attestation_object: dict,
+    db: Session = Depends(get_db)
+):
+    state = active_challenges.get(f"reg:{user_id}")
+    if not state:
+        raise HTTPException(400, "Challenge expired")
+
+    auth_data = fido2_server.register_complete(
+        state,
+        client_data,
+        attestation_object
+    )
+
+    # ⚠️ ВАЖЛИВО: тут потрібна твоя SQL модель
+    credential = PasskeyCredential(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        credential_id=auth_data.credential_data.credential_id.hex(),
+        public_key=auth_data.credential_data.public_key,
+        sign_count=auth_data.credential_data.sign_count
+    )
+
+    db.add(credential)
+    db.commit()
+
+    del active_challenges[f"reg:{user_id}"]
+
+    return {"success": True}
+@router.post("/passkey/login/begin")
+def passkey_login_begin(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+
+    creds = db.query(PasskeyCredential).filter(
+        PasskeyCredential.user_id == user.id
+    ).all()
+
+    allow_credentials = [
+        {"id": c.credential_id}
+        for c in creds
+    ]
+
+    data, state = fido2_server.authenticate_begin(allow_credentials)
+
+    active_challenges[f"auth:{user.id}"] = state
+
+    return {
+        "userId": user.id,
+        "options": data
+    }
+
+@router.post("/passkey/login/finish")
+def passkey_login_finish(
+    user_id: str,
+    credential_id: str,
+    client_data: dict,
+    authenticator_data: dict,
+    signature: str,
+    db: Session = Depends(get_db)
+):
+    cred = db.query(PasskeyCredential).filter(
+        PasskeyCredential.credential_id == credential_id
+    ).first()
+
+    if not cred:
+        raise HTTPException(400, "Unknown credential")
+
+    state = active_challenges.get(f"auth:{user_id}")
+    if not state:
+        raise HTTPException(400, "Challenge expired")
