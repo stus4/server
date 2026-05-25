@@ -34,6 +34,7 @@ class User(Base):
         "CommentReport",
         back_populates="user"
     )
+    passkeys = relationship("Passkey", back_populates="user")
 
 class Category(Base):
     __tablename__ = 'categories'
@@ -185,4 +186,17 @@ class IdeaWork(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     idea_id = Column(String(36), ForeignKey("ideas.id", ondelete="CASCADE"), nullable=False)
     work_id = Column(String(36), ForeignKey("works.id", ondelete="CASCADE"), nullable=False)
+class Passkey(Base):
+    __tablename__ = "passkeys"
 
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"))
+
+    credential_id = Column(Text, nullable=False)
+    public_key = Column(Text, nullable=False)
+
+    sign_count = Column(Integer, default=0)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="passkeys")

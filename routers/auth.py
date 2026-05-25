@@ -206,3 +206,19 @@ def enable_2fa(user_id: str, code: str, db: Session = Depends(get_db)):
         "success": True,
         "message": "2FA successfully enabled"
     }
+@router.post("/2fa/disable")
+def disable_2fa(user_id: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.twofa_enabled = False
+    user.twofa_secret = None
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "2FA disabled"
+    }
